@@ -1,0 +1,65 @@
+{
+    "$schema": "https://getcomposer.org/schema.json",
+    "name": "jorgecortesdev/laravel-claudify",
+    "description": "Configure Claude Code for Laravel projects. Installs skills, agents, plugins, permissions, hooks, and MCP server configs automatically.",
+    "keywords": [
+        "laravel",
+        "claude",
+        "claude-code",
+        "ai",
+        "mcp",
+        "developer-tools"
+    ],
+    "homepage": "https://github.com/jorgecortesdev/laravel-claudify",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Jorge Cortés",
+            "email": "me@jorgecortes.dev",
+            "homepage": "https://jorgecortes.dev"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "illuminate/console": "^11.0|^12.0|^13.0",
+        "illuminate/filesystem": "^11.0|^12.0|^13.0",
+        "illuminate/support": "^11.0|^12.0|^13.0"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.0",
+        "orchestra/testbench": "^9.0|^10.0|^11.0",
+        "pestphp/pest": "^3.0|^4.0"
+    },
+    "suggest": {
+        "laravel/boost": "Provides MCP tools, guidelines, and skills for Claude Code (^2.0)"
+    },
+    "autoload": {
+        "psr-4": {
+            "JorgeCortesDev\\Claudify\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "JorgeCortesDev\\Claudify\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/pest",
+        "format": "vendor/bin/pint"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "JorgeCortesDev\\Claudify\\ClaudifyServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

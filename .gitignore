@@ -1,0 +1,10 @@
+.DS_Store
+.idea
+.claude
+CLAUDE.md
+/vendor/
+/node_modules/
+phpunit.xml
+.phpunit.result.cache
+.php-cs-fixer.cache
+composer.lock
