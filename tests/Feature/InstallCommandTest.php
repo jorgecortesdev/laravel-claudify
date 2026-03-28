@@ -3,6 +3,14 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Process;
+
+beforeEach(function (): void {
+    Process::fake([
+        'which claude' => Process::result(),
+        'claude plugin *' => Process::result(output: '[]'),
+    ]);
+});
 
 afterEach(function (): void {
     if (File::isDirectory(base_path('.claude'))) {

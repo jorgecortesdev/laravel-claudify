@@ -7,10 +7,11 @@ namespace JorgeCortesDev\Claudify\Console;
 use Illuminate\Console\Command;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Composer;
+use Illuminate\Support\Facades\Process;
 use JorgeCortesDev\Claudify\Detection\StackDetector;
 use JorgeCortesDev\Claudify\Enums\WriteResult;
-use JorgeCortesDev\Claudify\Writers\JsonWriter;
 use JorgeCortesDev\Claudify\Writers\DirectoryWriter;
+use JorgeCortesDev\Claudify\Writers\JsonWriter;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\info;
@@ -30,6 +31,12 @@ class InstallCommand extends Command
 
     public function handle(): int
     {
+        if (! $this->claudeCliExists()) {
+            $this->components->error('Claude Code CLI not found. Install it from https://claude.ai/download');
+
+            return self::FAILURE;
+        }
+
         $this->detector = new StackDetector;
 
         info('Claudify :: Configure Claude Code for Laravel');
@@ -47,6 +54,7 @@ class InstallCommand extends Command
         $this->installMcpConfig();
         $this->installSkills();
         $this->installAgents();
+        $this->installPlugins();
 
         note('Done. Claude Code is configured for this project.');
 
@@ -338,6 +346,72 @@ class InstallCommand extends Command
 
             $this->components->twoColumnDetail("{$prefix}/{$name}", $status);
         }
+    }
+
+    private function installPlugins(): void
+    {
+        $installed = $this->installedPlugins();
+        $desired = $this->desiredPlugins();
+
+        foreach ($desired as $pluginId) {
+            if (in_array($pluginId, $installed, true)) {
+                $this->components->twoColumnDetail($pluginId, '<fg=blue>already installed</>');
+
+                continue;
+            }
+
+            $result = Process::run("claude plugin install {$pluginId} --scope project");
+
+            $status = $result->successful()
+                ? '<fg=green>installed</>'
+                : '<fg=red>failed</>';
+
+            $this->components->twoColumnDetail($pluginId, $status);
+        }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function installedPlugins(): array
+    {
+        $result = Process::run('claude plugin list --json');
+
+        if (! $result->successful()) {
+            return [];
+        }
+
+        $plugins = json_decode($result->output(), true);
+
+        if (! is_array($plugins)) {
+            return [];
+        }
+
+        return array_column($plugins, 'id');
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function desiredPlugins(): array
+    {
+        $plugins = [
+            'laravel-simplifier@laravel',
+            'php-lsp@claude-plugins-official',
+        ];
+
+        if ($this->detector->hasNodeDependencies()) {
+            $plugins[] = 'typescript-lsp@claude-plugins-official';
+        }
+
+        return $plugins;
+    }
+
+    private function claudeCliExists(): bool
+    {
+        $result = Process::run('which claude');
+
+        return $result->successful();
     }
 
     private function makeSkillWriter(): DirectoryWriter
