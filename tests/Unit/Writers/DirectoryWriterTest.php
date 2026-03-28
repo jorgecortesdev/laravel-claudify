@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use JorgeCortesDev\Claudify\Enums\WriteResult;
-use JorgeCortesDev\Claudify\Writers\SkillWriter;
+use JorgeCortesDev\Claudify\Writers\DirectoryWriter;
 
 function createTempDir(): string
 {
@@ -35,7 +35,7 @@ it('writes a skill directory to the target', function (): void {
     $source = fixturePath('skills');
     $target = createTempDir();
 
-    $writer = new SkillWriter($source, $target);
+    $writer = new DirectoryWriter($source, $target);
     $result = $writer->write('test-skill');
 
     expect($result)->toBe(WriteResult::SUCCESS)
@@ -51,7 +51,7 @@ it('returns UPDATED when skill directory already exists', function (): void {
     mkdir($target.'/test-skill', 0755, true);
     file_put_contents($target.'/test-skill/SKILL.md', 'old content');
 
-    $writer = new SkillWriter($source, $target);
+    $writer = new DirectoryWriter($source, $target);
     $result = $writer->write('test-skill');
 
     $content = file_get_contents($target.'/test-skill/SKILL.md');
@@ -66,7 +66,7 @@ it('returns FAILED when source directory does not exist', function (): void {
     $source = fixturePath('skills');
     $target = createTempDir();
 
-    $writer = new SkillWriter($source, $target);
+    $writer = new DirectoryWriter($source, $target);
     $result = $writer->write('nonexistent-skill');
 
     expect($result)->toBe(WriteResult::FAILED);
@@ -78,7 +78,7 @@ it('copies nested directory structure', function (): void {
     $source = fixturePath('skills');
     $target = createTempDir();
 
-    $writer = new SkillWriter($source, $target);
+    $writer = new DirectoryWriter($source, $target);
     $result = $writer->write('nested-skill');
 
     expect($result)->toBe(WriteResult::SUCCESS)
@@ -93,7 +93,7 @@ it('throws exception for path traversal in skill name', function (string $malici
     $source = fixturePath('skills');
     $target = createTempDir();
 
-    $writer = new SkillWriter($source, $target);
+    $writer = new DirectoryWriter($source, $target);
 
     expect(fn (): WriteResult => $writer->write($maliciousName))
         ->toThrow(RuntimeException::class, 'Invalid skill name');
@@ -111,7 +111,7 @@ it('writes all skills from source directory', function (): void {
     $source = fixturePath('skills');
     $target = createTempDir();
 
-    $writer = new SkillWriter($source, $target);
+    $writer = new DirectoryWriter($source, $target);
     $results = $writer->writeAll();
 
     expect($results)->toHaveCount(2)
@@ -124,8 +124,8 @@ it('writes all skills from source directory', function (): void {
 it('lists available skills from source directory', function (): void {
     $source = fixturePath('skills');
 
-    $writer = new SkillWriter($source, sys_get_temp_dir());
-    $skills = $writer->availableSkills();
+    $writer = new DirectoryWriter($source, sys_get_temp_dir());
+    $skills = $writer->available();
 
     expect($skills)->toContain('test-skill')
         ->and($skills)->toContain('nested-skill');
@@ -138,7 +138,7 @@ it('removes a skill directory', function (): void {
     mkdir($skillDir, 0755, true);
     file_put_contents($skillDir.'/SKILL.md', 'test content');
 
-    $writer = new SkillWriter(sys_get_temp_dir(), $target);
+    $writer = new DirectoryWriter(sys_get_temp_dir(), $target);
     $result = $writer->remove('test-skill');
 
     expect($result)->toBeTrue()
@@ -150,7 +150,7 @@ it('removes a skill directory', function (): void {
 it('returns true when removing non-existent skill', function (): void {
     $target = createTempDir();
 
-    $writer = new SkillWriter(sys_get_temp_dir(), $target);
+    $writer = new DirectoryWriter(sys_get_temp_dir(), $target);
     $result = $writer->remove('nonexistent');
 
     expect($result)->toBeTrue();
@@ -161,7 +161,7 @@ it('returns true when removing non-existent skill', function (): void {
 it('returns false when removing skill with invalid name', function (): void {
     $target = createTempDir();
 
-    $writer = new SkillWriter(sys_get_temp_dir(), $target);
+    $writer = new DirectoryWriter(sys_get_temp_dir(), $target);
 
     expect($writer->remove('../malicious'))->toBeFalse()
         ->and($writer->remove('skill/with/slash'))->toBeFalse();
@@ -177,7 +177,7 @@ it('removes multiple stale skills', function (): void {
         file_put_contents($target.'/'.$name.'/SKILL.md', $name);
     }
 
-    $writer = new SkillWriter(sys_get_temp_dir(), $target);
+    $writer = new DirectoryWriter(sys_get_temp_dir(), $target);
     $results = $writer->removeStale(['skill-one', 'skill-two']);
 
     expect($results)->toHaveCount(2)
@@ -202,7 +202,7 @@ it('syncs skills by writing new and removing stale', function (): void {
     $manifestPath = $target.'/.claudify-manifest.json';
     file_put_contents($manifestPath, json_encode(['stale-skill']));
 
-    $writer = new SkillWriter($source, $target);
+    $writer = new DirectoryWriter($source, $target);
     $results = $writer->sync();
 
     expect($results)->toHaveCount(2)
@@ -222,7 +222,7 @@ it('preserves untracked skills during sync', function (): void {
     mkdir($userSkillDir, 0755, true);
     file_put_contents($userSkillDir.'/SKILL.md', 'user content');
 
-    $writer = new SkillWriter($source, $target);
+    $writer = new DirectoryWriter($source, $target);
     $writer->sync();
 
     expect($userSkillDir)->toBeDirectory()
@@ -235,7 +235,7 @@ it('is idempotent across multiple writes', function (): void {
     $source = fixturePath('skills');
     $target = createTempDir();
 
-    $writer = new SkillWriter($source, $target);
+    $writer = new DirectoryWriter($source, $target);
 
     $first = $writer->write('test-skill');
     $second = $writer->write('test-skill');
@@ -258,7 +258,7 @@ it('removes nested skill directory with deep structure', function (): void {
     file_put_contents($skillDir.'/SKILL.md', 'test');
     file_put_contents($deepDir.'/file.md', 'nested content');
 
-    $writer = new SkillWriter(sys_get_temp_dir(), $target);
+    $writer = new DirectoryWriter(sys_get_temp_dir(), $target);
     $result = $writer->remove('nested-skill');
 
     expect($result)->toBeTrue()

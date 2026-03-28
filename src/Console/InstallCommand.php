@@ -10,7 +10,7 @@ use Illuminate\Support\Composer;
 use JorgeCortesDev\Claudify\Detection\StackDetector;
 use JorgeCortesDev\Claudify\Enums\WriteResult;
 use JorgeCortesDev\Claudify\Writers\JsonWriter;
-use JorgeCortesDev\Claudify\Writers\SkillWriter;
+use JorgeCortesDev\Claudify\Writers\DirectoryWriter;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\info;
@@ -46,6 +46,7 @@ class InstallCommand extends Command
         $this->installSettings();
         $this->installMcpConfig();
         $this->installSkills();
+        $this->installAgents();
 
         note('Done. Claude Code is configured for this project.');
 
@@ -80,27 +81,25 @@ class InstallCommand extends Command
         $this->line('  .mcp.json');
         $this->displayJsonPreview($this->buildMcpConfig());
 
-        $hookScripts = $this->hookScriptsToInstall();
+        $this->displayDryRunList('.claude/hooks/', $this->hookScriptsToInstall());
+        $this->displayDryRunList('.claude/skills/', $this->makeSkillWriter()->available(), '/');
+        $this->displayDryRunList('.claude/agents/', $this->makeAgentWriter()->available(), '/');
+    }
 
-        if ($hookScripts !== []) {
-            $this->line('');
-            $this->line('  .claude/hooks/');
-
-            foreach ($hookScripts as $script) {
-                $this->line("    {$script}");
-            }
+    /**
+     * @param  array<int, string>  $items
+     */
+    private function displayDryRunList(string $heading, array $items, string $suffix = ''): void
+    {
+        if ($items === []) {
+            return;
         }
 
-        $writer = $this->makeSkillWriter();
-        $skills = $writer->availableSkills();
+        $this->line('');
+        $this->line("  {$heading}");
 
-        if ($skills !== []) {
-            $this->line('');
-            $this->line('  .claude/skills/');
-
-            foreach ($skills as $name) {
-                $this->line("    {$name}/");
-            }
+        foreach ($items as $item) {
+            $this->line("    {$item}{$suffix}");
         }
     }
 
@@ -207,9 +206,7 @@ class InstallCommand extends Command
      */
     private function buildMcpConfig(): array
     {
-        $servers = [];
-
-        return ['mcpServers' => $servers];
+        return ['mcpServers' => []];
     }
 
     private function installBoost(): void
@@ -322,25 +319,40 @@ class InstallCommand extends Command
 
     private function installSkills(): void
     {
-        $writer = $this->makeSkillWriter();
-        $results = $writer->sync();
+        $this->syncAndReport($this->makeSkillWriter(), '.claude/skills');
+    }
 
-        foreach ($results as $name => $result) {
+    private function installAgents(): void
+    {
+        $this->syncAndReport($this->makeAgentWriter(), '.claude/agents');
+    }
+
+    private function syncAndReport(DirectoryWriter $writer, string $prefix): void
+    {
+        foreach ($writer->sync() as $name => $result) {
             $status = match ($result) {
                 WriteResult::SUCCESS => '<fg=green>written</>',
                 WriteResult::UPDATED => '<fg=yellow>updated</>',
                 WriteResult::FAILED => '<fg=red>failed</>',
             };
 
-            $this->components->twoColumnDetail(".claude/skills/{$name}", $status);
+            $this->components->twoColumnDetail("{$prefix}/{$name}", $status);
         }
     }
 
-    private function makeSkillWriter(): SkillWriter
+    private function makeSkillWriter(): DirectoryWriter
     {
-        return new SkillWriter(
+        return new DirectoryWriter(
             dirname(__DIR__, 2).'/resources/skills',
             base_path('.claude/skills'),
+        );
+    }
+
+    private function makeAgentWriter(): DirectoryWriter
+    {
+        return new DirectoryWriter(
+            dirname(__DIR__, 2).'/resources/agents',
+            base_path('.claude/agents'),
         );
     }
 }

@@ -8,7 +8,7 @@ use JorgeCortesDev\Claudify\Enums\WriteResult;
 use RuntimeException;
 use Symfony\Component\Finder\Finder;
 
-class SkillWriter
+class DirectoryWriter
 {
     private const MANIFEST_FILE = '.claudify-manifest.json';
 
@@ -44,7 +44,7 @@ class SkillWriter
     {
         $results = [];
 
-        foreach ($this->availableSkills() as $skillName) {
+        foreach ($this->available() as $skillName) {
             $results[$skillName] = $this->write($skillName);
         }
 
@@ -102,7 +102,7 @@ class SkillWriter
     /**
      * @return array<int, string>
      */
-    public function availableSkills(): array
+    public function available(): array
     {
         if (! is_dir($this->sourcePath)) {
             return [];
