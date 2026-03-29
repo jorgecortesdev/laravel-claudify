@@ -9,17 +9,19 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Composer;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
+use JorgeCortesDev\Claudify\Concerns\DisplayHelper;
 use JorgeCortesDev\Claudify\Detection\StackDetector;
 use JorgeCortesDev\Claudify\Enums\WriteResult;
 use JorgeCortesDev\Claudify\Writers\DirectoryWriter;
 use JorgeCortesDev\Claudify\Writers\JsonWriter;
 
 use function Laravel\Prompts\confirm;
-use function Laravel\Prompts\info;
 use function Laravel\Prompts\note;
 
 class InstallCommand extends Command
 {
+    use DisplayHelper;
+
     protected $signature = 'claudify:install
         {--dry-run : Show what would be configured without writing files}';
 
@@ -37,7 +39,7 @@ class InstallCommand extends Command
 
         $this->detector = new StackDetector;
 
-        info('Claudify :: Configure Claude Code for Laravel');
+        $this->displayHeader('Install', config('app.name', 'Laravel'));
         $this->displayDetectedStack();
 
         if ($this->option('dry-run')) {
@@ -53,7 +55,7 @@ class InstallCommand extends Command
         $this->installAgents();
         $this->installPlugins();
 
-        note('Done. Claude Code is configured for this project.');
+        $this->displayOutro(' Claude Code is now configured for this project. ');
 
         return self::SUCCESS;
     }

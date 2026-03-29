@@ -54,7 +54,7 @@ class JsonWriter
         foreach ($override as $key => $value) {
             if (is_array($value) && isset($base[$key]) && is_array($base[$key])) {
                 if (array_is_list($value) && array_is_list($base[$key])) {
-                    $base[$key] = array_values(array_unique(array_merge($base[$key], $value)));
+                    $base[$key] = array_values(array_unique(array_merge($base[$key], $value), SORT_REGULAR));
                 } else {
                     $base[$key] = $this->mergeRecursive($base[$key], $value);
                 }
