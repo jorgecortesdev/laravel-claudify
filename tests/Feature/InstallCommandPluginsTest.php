@@ -20,7 +20,7 @@ afterEach(function (): void {
 });
 
 it('installs laravel-simplifier and php-lsp when not already installed', function (): void {
-    file_put_contents(base_path('composer.json'), json_encode([]));
+    file_put_contents(base_path('composer.json'), json_encode(['require-dev' => ['laravel/boost' => '^2.0']]));
 
     Process::fake([
         'which claude' => Process::result(),
@@ -28,7 +28,7 @@ it('installs laravel-simplifier and php-lsp when not already installed', functio
         'claude plugin install *' => Process::result(),
     ]);
 
-    $this->artisan('claudify:install', ['--refresh' => true, '--no-boost' => true])
+    $this->artisan('claudify:install', ['--refresh' => true])
         ->assertSuccessful();
 
     Process::assertRan('claude plugin install laravel-simplifier@laravel --scope project');
@@ -36,7 +36,7 @@ it('installs laravel-simplifier and php-lsp when not already installed', functio
 });
 
 it('skips already installed plugins', function (): void {
-    file_put_contents(base_path('composer.json'), json_encode([]));
+    file_put_contents(base_path('composer.json'), json_encode(['require-dev' => ['laravel/boost' => '^2.0']]));
 
     $installedPlugins = json_encode([
         ['id' => 'laravel-simplifier@laravel', 'scope' => 'user', 'enabled' => true],
@@ -49,7 +49,7 @@ it('skips already installed plugins', function (): void {
         'claude plugin install *' => Process::result(),
     ]);
 
-    $this->artisan('claudify:install', ['--refresh' => true, '--no-boost' => true])
+    $this->artisan('claudify:install', ['--refresh' => true])
         ->assertSuccessful()
         ->expectsOutputToContain('already installed');
 
@@ -58,7 +58,7 @@ it('skips already installed plugins', function (): void {
 });
 
 it('installs typescript-lsp when node dependencies detected', function (): void {
-    file_put_contents(base_path('composer.json'), json_encode([]));
+    file_put_contents(base_path('composer.json'), json_encode(['require-dev' => ['laravel/boost' => '^2.0']]));
     file_put_contents(base_path('package.json'), json_encode(['devDependencies' => []]));
 
     Process::fake([
@@ -67,14 +67,14 @@ it('installs typescript-lsp when node dependencies detected', function (): void 
         'claude plugin install *' => Process::result(),
     ]);
 
-    $this->artisan('claudify:install', ['--refresh' => true, '--no-boost' => true])
+    $this->artisan('claudify:install', ['--refresh' => true])
         ->assertSuccessful();
 
     Process::assertRan('claude plugin install typescript-lsp@claude-plugins-official --scope project');
 });
 
 it('does not install typescript-lsp when no node dependencies', function (): void {
-    file_put_contents(base_path('composer.json'), json_encode([]));
+    file_put_contents(base_path('composer.json'), json_encode(['require-dev' => ['laravel/boost' => '^2.0']]));
 
     Process::fake([
         'which claude' => Process::result(),
@@ -82,20 +82,20 @@ it('does not install typescript-lsp when no node dependencies', function (): voi
         'claude plugin install *' => Process::result(),
     ]);
 
-    $this->artisan('claudify:install', ['--refresh' => true, '--no-boost' => true])
+    $this->artisan('claudify:install', ['--refresh' => true])
         ->assertSuccessful();
 
     Process::assertNotRan('claude plugin install typescript-lsp*');
 });
 
 it('fails when claude cli is not available', function (): void {
-    file_put_contents(base_path('composer.json'), json_encode([]));
+    file_put_contents(base_path('composer.json'), json_encode(['require-dev' => ['laravel/boost' => '^2.0']]));
 
     Process::fake([
         'which claude' => Process::result(exitCode: 1),
     ]);
 
-    $this->artisan('claudify:install', ['--refresh' => true, '--no-boost' => true])
+    $this->artisan('claudify:install', ['--refresh' => true])
         ->assertFailed()
         ->expectsOutputToContain('Claude Code CLI not found');
 });

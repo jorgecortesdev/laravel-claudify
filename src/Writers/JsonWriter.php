@@ -8,23 +8,23 @@ use Illuminate\Support\Facades\File;
 
 class JsonWriter
 {
-    public function __construct(private string $filePath) {}
+    public function __construct(private readonly string $filePath) {}
 
     /**
      * @param  array<string, mixed>  $data
      */
-    public function write(array $data): bool
+    public function write(array $data): void
     {
         File::ensureDirectoryExists(dirname($this->filePath));
 
-        if (! File::exists($this->filePath)) {
-            return $this->writeJson($data);
+        if (File::exists($this->filePath)) {
+            $existing = json_decode(File::get($this->filePath), true) ?? [];
+            $data = $this->mergeRecursive($existing, $data);
         }
 
-        $existing = json_decode(File::get($this->filePath), true) ?? [];
-        $merged = $this->mergeRecursive($existing, $data);
+        $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-        return $this->writeJson($merged);
+        File::put($this->filePath, $json."\n");
     }
 
     public function exists(): bool
@@ -42,16 +42,6 @@ class JsonWriter
         }
 
         return json_decode(File::get($this->filePath), true) ?? [];
-    }
-
-    /**
-     * @param  array<string, mixed>  $data
-     */
-    private function writeJson(array $data): bool
-    {
-        $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-
-        return File::put($this->filePath, $json."\n") !== false;
     }
 
     /**

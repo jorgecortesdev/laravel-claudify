@@ -7,6 +7,7 @@ namespace JorgeCortesDev\Claudify\Console;
 use Illuminate\Console\Command;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Composer;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use JorgeCortesDev\Claudify\Detection\StackDetector;
 use JorgeCortesDev\Claudify\Enums\WriteResult;
@@ -16,14 +17,12 @@ use JorgeCortesDev\Claudify\Writers\JsonWriter;
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\info;
 use function Laravel\Prompts\note;
-use function Laravel\Prompts\table;
 
 class InstallCommand extends Command
 {
     protected $signature = 'claudify:install
         {--refresh : Re-detect stack and update configuration}
-        {--dry-run : Show what would be configured without writing files}
-        {--no-boost : Skip laravel/boost installation}';
+        {--dry-run : Show what would be configured without writing files}';
 
     protected $description = 'Configure Claude Code for this Laravel project';
 
@@ -51,7 +50,6 @@ class InstallCommand extends Command
         $this->installBoost();
         $this->installHooks();
         $this->installSettings();
-        $this->installMcpConfig();
         $this->installSkills();
         $this->installAgents();
         $this->installPlugins();
@@ -71,10 +69,9 @@ class InstallCommand extends Command
             return;
         }
 
-        table(
-            ['Package', 'Detected'],
-            $detected->keys()->map(fn (string $key): array => [$key, 'yes'])->toArray()
-        );
+        foreach ($detected->keys() as $package) {
+            $this->components->twoColumnDetail($package, '<fg=green>detected</>');
+        }
     }
 
     private function displayDryRun(): void
@@ -84,10 +81,6 @@ class InstallCommand extends Command
         $this->line('');
         $this->line('  .claude/settings.json');
         $this->displayJsonPreview($this->buildSettings());
-
-        $this->line('');
-        $this->line('  .mcp.json');
-        $this->displayJsonPreview($this->buildMcpConfig());
 
         $this->displayDryRunList('.claude/hooks/', $this->hookScriptsToInstall());
         $this->displayDryRunList('.claude/skills/', $this->makeSkillWriter()->available(), '/');
@@ -126,36 +119,13 @@ class InstallCommand extends Command
     private function installSettings(): void
     {
         $writer = new JsonWriter(base_path('.claude/settings.json'));
-        $settings = $this->buildSettings();
 
-        if ($writer->exists() && ! $this->option('refresh')) {
-            if (! confirm('.claude/settings.json already exists. Merge new settings?', true)) {
-                return;
-            }
-        }
-
-        $writer->write($settings);
-        $this->components->twoColumnDetail('.claude/settings.json', '<fg=green>written</>');
-    }
-
-    private function installMcpConfig(): void
-    {
-        $mcpConfig = $this->buildMcpConfig();
-
-        if (empty($mcpConfig['mcpServers'])) {
+        if ($writer->exists() && ! $this->option('refresh') && ! confirm('.claude/settings.json already exists. Merge new settings?', true)) {
             return;
         }
 
-        $writer = new JsonWriter(base_path('.mcp.json'));
-
-        if ($writer->exists() && ! $this->option('refresh')) {
-            if (! confirm('.mcp.json already exists. Merge new settings?', true)) {
-                return;
-            }
-        }
-
-        $writer->write($mcpConfig);
-        $this->components->twoColumnDetail('.mcp.json', '<fg=green>written</>');
+        $writer->write($this->buildSettings());
+        $this->components->twoColumnDetail('.claude/settings.json', '<fg=green>written</>');
     }
 
     /**
@@ -209,17 +179,9 @@ class InstallCommand extends Command
         return $permissions;
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function buildMcpConfig(): array
-    {
-        return ['mcpServers' => []];
-    }
-
     private function installBoost(): void
     {
-        if ($this->option('no-boost') || $this->detector->hasBoost()) {
+        if ($this->detector->hasBoost()) {
             return;
         }
 
@@ -253,29 +215,26 @@ class InstallCommand extends Command
 
     private function installHooks(): void
     {
-        $sourcePath = dirname(__DIR__, 2).'/resources/hooks';
-        $targetPath = base_path('.claude/hooks');
-
         $scripts = $this->hookScriptsToInstall();
 
         if ($scripts === []) {
             return;
         }
 
-        if (! is_dir($targetPath)) {
-            mkdir($targetPath, 0755, true);
-        }
+        $sourcePath = $this->resourcePath('hooks');
+        $targetPath = base_path('.claude/hooks');
+
+        File::ensureDirectoryExists($targetPath);
 
         foreach ($scripts as $script) {
             $source = $sourcePath.'/'.$script;
-            $target = $targetPath.'/'.$script;
 
             if (! file_exists($source)) {
                 continue;
             }
 
-            copy($source, $target);
-            chmod($target, 0755);
+            File::copy($source, $targetPath.'/'.$script);
+            chmod($targetPath.'/'.$script, 0755);
 
             $this->components->twoColumnDetail(".claude/hooks/{$script}", '<fg=green>written</>');
         }
@@ -351,9 +310,8 @@ class InstallCommand extends Command
     private function installPlugins(): void
     {
         $installed = $this->installedPlugins();
-        $desired = $this->desiredPlugins();
 
-        foreach ($desired as $pluginId) {
+        foreach ($this->desiredPlugins() as $pluginId) {
             if (in_array($pluginId, $installed, true)) {
                 $this->components->twoColumnDetail($pluginId, '<fg=blue>already installed</>');
 
@@ -409,15 +367,18 @@ class InstallCommand extends Command
 
     private function claudeCliExists(): bool
     {
-        $result = Process::run('which claude');
+        return Process::run('which claude')->successful();
+    }
 
-        return $result->successful();
+    private function resourcePath(string $path = ''): string
+    {
+        return dirname(__DIR__, 2).'/resources'.($path ? "/{$path}" : '');
     }
 
     private function makeSkillWriter(): DirectoryWriter
     {
         return new DirectoryWriter(
-            dirname(__DIR__, 2).'/resources/skills',
+            $this->resourcePath('skills'),
             base_path('.claude/skills'),
         );
     }
@@ -425,7 +386,7 @@ class InstallCommand extends Command
     private function makeAgentWriter(): DirectoryWriter
     {
         return new DirectoryWriter(
-            dirname(__DIR__, 2).'/resources/agents',
+            $this->resourcePath('agents'),
             base_path('.claude/agents'),
         );
     }

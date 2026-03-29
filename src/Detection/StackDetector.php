@@ -94,7 +94,7 @@ class StackDetector
     /**
      * @return Collection<string, bool>
      */
-    public function detect(): Collection
+    public function all(): Collection
     {
         return collect([
             'pest' => $this->hasPest(),
@@ -118,7 +118,7 @@ class StackDetector
      */
     public function detected(): Collection
     {
-        return $this->detect()->filter();
+        return $this->all()->filter();
     }
 
     private function hasPackage(string $package): bool

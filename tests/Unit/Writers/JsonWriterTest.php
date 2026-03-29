@@ -26,10 +26,9 @@ it('writes json to a new file', function (): void {
     $path = createTempJsonPath();
 
     $writer = new JsonWriter($path);
-    $result = $writer->write(['key' => 'value']);
+    $writer->write(['key' => 'value']);
 
-    expect($result)->toBeTrue()
-        ->and($path)->toBeFile();
+    expect($path)->toBeFile();
 
     $content = json_decode(file_get_contents($path), true);
     expect($content)->toBe(['key' => 'value']);

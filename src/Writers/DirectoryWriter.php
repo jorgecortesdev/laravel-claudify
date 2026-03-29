@@ -4,82 +4,18 @@ declare(strict_types=1);
 
 namespace JorgeCortesDev\Claudify\Writers;
 
+use Illuminate\Support\Facades\File;
 use JorgeCortesDev\Claudify\Enums\WriteResult;
 use RuntimeException;
-use Symfony\Component\Finder\Finder;
 
 class DirectoryWriter
 {
     private const MANIFEST_FILE = '.claudify-manifest.json';
 
     public function __construct(
-        private string $sourcePath,
-        private string $targetPath,
+        private readonly string $sourcePath,
+        private readonly string $targetPath,
     ) {}
-
-    public function write(string $skillName): WriteResult
-    {
-        $this->validateSkillName($skillName);
-
-        $source = $this->sourcePath.DIRECTORY_SEPARATOR.$skillName;
-        $target = $this->targetPath.DIRECTORY_SEPARATOR.$skillName;
-
-        if (! is_dir($source)) {
-            return WriteResult::FAILED;
-        }
-
-        $existed = is_dir($target);
-
-        if (! $this->copyDirectory($source, $target)) {
-            return WriteResult::FAILED;
-        }
-
-        return $existed ? WriteResult::UPDATED : WriteResult::SUCCESS;
-    }
-
-    /**
-     * @return array<string, WriteResult>
-     */
-    public function writeAll(): array
-    {
-        $results = [];
-
-        foreach ($this->available() as $skillName) {
-            $results[$skillName] = $this->write($skillName);
-        }
-
-        return $results;
-    }
-
-    public function remove(string $skillName): bool
-    {
-        if (! $this->isValidSkillName($skillName)) {
-            return false;
-        }
-
-        $target = $this->targetPath.DIRECTORY_SEPARATOR.$skillName;
-
-        if (! is_dir($target)) {
-            return true;
-        }
-
-        return $this->deleteDirectory($target);
-    }
-
-    /**
-     * @param  array<int, string>  $skillNames
-     * @return array<string, bool>
-     */
-    public function removeStale(array $skillNames): array
-    {
-        $results = [];
-
-        foreach ($skillNames as $name) {
-            $results[$name] = $this->remove($name);
-        }
-
-        return $results;
-    }
 
     /**
      * @return array<string, WriteResult>
@@ -87,14 +23,17 @@ class DirectoryWriter
     public function sync(): array
     {
         $previouslyTracked = $this->readManifest();
+        $written = [];
 
-        $written = $this->writeAll();
+        foreach ($this->available() as $name) {
+            $written[$name] = $this->write($name);
+        }
 
-        $currentSkillNames = array_keys($written);
-        $stale = array_values(array_diff($previouslyTracked, $currentSkillNames));
+        foreach (array_diff($previouslyTracked, array_keys($written)) as $name) {
+            $this->remove($name);
+        }
 
-        $this->removeStale($stale);
-        $this->writeManifest($currentSkillNames);
+        $this->writeManifest(array_keys($written));
 
         return $written;
     }
@@ -108,72 +47,41 @@ class DirectoryWriter
             return [];
         }
 
-        $dirs = glob($this->sourcePath.DIRECTORY_SEPARATOR.'*', GLOB_ONLYDIR);
+        $dirs = glob($this->sourcePath.'/*', GLOB_ONLYDIR);
 
         return array_map('basename', $dirs ?: []);
     }
 
-    private function validateSkillName(string $skillName): void
+    private function write(string $name): WriteResult
     {
-        if (! $this->isValidSkillName($skillName)) {
-            throw new RuntimeException("Invalid skill name: {$skillName}");
-        }
-    }
+        $this->validateName($name);
 
-    private function isValidSkillName(string $name): bool
-    {
-        return trim($name) !== ''
-            && ! str_contains($name, '..')
-            && ! str_contains($name, '/')
-            && ! str_contains($name, '\\');
-    }
+        $source = $this->sourcePath.'/'.$name;
+        $target = $this->targetPath.'/'.$name;
 
-    private function copyDirectory(string $source, string $target): bool
-    {
-        $this->deleteDirectory($target);
-        $this->ensureDirectoryExists($target);
-
-        $finder = Finder::create()
-            ->files()
-            ->in($source)
-            ->ignoreDotFiles(false);
-
-        foreach ($finder as $file) {
-            $targetFile = $target.DIRECTORY_SEPARATOR.$file->getRelativePathname();
-
-            $this->ensureDirectoryExists(dirname($targetFile));
-
-            if (! @copy($file->getRealPath(), $targetFile)) {
-                return false;
-            }
+        if (! is_dir($source)) {
+            return WriteResult::FAILED;
         }
 
-        return true;
+        $existed = is_dir($target);
+
+        File::deleteDirectory($target);
+        File::copyDirectory($source, $target);
+
+        return $existed ? WriteResult::UPDATED : WriteResult::SUCCESS;
     }
 
-    private function deleteDirectory(string $path): bool
+    private function remove(string $name): void
     {
-        if (! is_dir($path)) {
-            return false;
-        }
+        $this->validateName($name);
 
-        $finder = Finder::create()
-            ->in($path)
-            ->ignoreDotFiles(false)
-            ->sortByName()
-            ->reverseSorting();
-
-        foreach ($finder as $file) {
-            $file->isDir() ? @rmdir($file->getPathname()) : @unlink($file->getPathname());
-        }
-
-        return @rmdir($path);
+        File::deleteDirectory($this->targetPath.'/'.$name);
     }
 
-    private function ensureDirectoryExists(string $path): void
+    private function validateName(string $name): void
     {
-        if (! is_dir($path)) {
-            @mkdir($path, 0755, true);
+        if (trim($name) === '' || str_contains($name, '..') || str_contains($name, '/') || str_contains($name, '\\')) {
+            throw new RuntimeException("Invalid name: {$name}");
         }
     }
 
@@ -182,31 +90,29 @@ class DirectoryWriter
      */
     private function readManifest(): array
     {
-        $manifestPath = $this->targetPath.DIRECTORY_SEPARATOR.self::MANIFEST_FILE;
+        $path = $this->targetPath.'/'.self::MANIFEST_FILE;
 
-        if (! file_exists($manifestPath)) {
+        if (! file_exists($path)) {
             return [];
         }
 
-        $data = json_decode(file_get_contents($manifestPath), true);
+        $data = json_decode(file_get_contents($path), true);
 
         return is_array($data) ? $data : [];
     }
 
     /**
-     * @param  array<int, string>  $skillNames
+     * @param  array<int, string>  $names
      */
-    private function writeManifest(array $skillNames): void
+    private function writeManifest(array $names): void
     {
-        $this->ensureDirectoryExists($this->targetPath);
+        File::ensureDirectoryExists($this->targetPath);
 
-        $manifestPath = $this->targetPath.DIRECTORY_SEPARATOR.self::MANIFEST_FILE;
-
-        sort($skillNames);
+        sort($names);
 
         file_put_contents(
-            $manifestPath,
-            json_encode($skillNames, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n"
+            $this->targetPath.'/'.self::MANIFEST_FILE,
+            json_encode($names, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n"
         );
     }
 }

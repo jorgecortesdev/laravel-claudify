@@ -177,7 +177,7 @@ it('returns all detection keys from detect()', function (): void {
     writeComposerJson([]);
 
     $detector = new StackDetector;
-    $all = $detector->detect();
+    $all = $detector->all();
 
     expect($all)->toHaveCount(13)
         ->and($all->keys()->toArray())->toBe([
