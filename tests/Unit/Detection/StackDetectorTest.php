@@ -32,30 +32,6 @@ it('detects pest in require-dev', function (): void {
     expect($detector->hasPest())->toBeTrue();
 });
 
-it('detects filament in require', function (): void {
-    writeComposerJson(['require' => ['filament/filament' => '^3.0']]);
-
-    $detector = new StackDetector;
-
-    expect($detector->hasFilament())->toBeTrue();
-});
-
-it('detects inertia in require', function (): void {
-    writeComposerJson(['require' => ['inertiajs/inertia-laravel' => '^2.0']]);
-
-    $detector = new StackDetector;
-
-    expect($detector->hasInertia())->toBeTrue();
-});
-
-it('detects livewire in require', function (): void {
-    writeComposerJson(['require' => ['livewire/livewire' => '^3.0']]);
-
-    $detector = new StackDetector;
-
-    expect($detector->hasLivewire())->toBeTrue();
-});
-
 it('detects boost in require-dev', function (): void {
     writeComposerJson(['require-dev' => ['laravel/boost' => '^1.0']]);
 
@@ -70,38 +46,6 @@ it('detects pint in require-dev', function (): void {
     $detector = new StackDetector;
 
     expect($detector->hasPint())->toBeTrue();
-});
-
-it('detects mcp in require', function (): void {
-    writeComposerJson(['require' => ['laravel/mcp' => '^1.0']]);
-
-    $detector = new StackDetector;
-
-    expect($detector->hasMcp())->toBeTrue();
-});
-
-it('detects sanctum in require', function (): void {
-    writeComposerJson(['require' => ['laravel/sanctum' => '^4.0']]);
-
-    $detector = new StackDetector;
-
-    expect($detector->hasSanctum())->toBeTrue();
-});
-
-it('detects horizon in require', function (): void {
-    writeComposerJson(['require' => ['laravel/horizon' => '^5.0']]);
-
-    $detector = new StackDetector;
-
-    expect($detector->hasHorizon())->toBeTrue();
-});
-
-it('detects telescope in require-dev', function (): void {
-    writeComposerJson(['require-dev' => ['laravel/telescope' => '^5.0']]);
-
-    $detector = new StackDetector;
-
-    expect($detector->hasTelescope())->toBeTrue();
 });
 
 it('detects node dependencies when package.json exists', function (): void {
@@ -146,22 +90,14 @@ it('does not detect packages that are absent', function (): void {
     $detector = new StackDetector;
 
     expect($detector->hasPest())->toBeFalse()
-        ->and($detector->hasFilament())->toBeFalse()
-        ->and($detector->hasInertia())->toBeFalse()
-        ->and($detector->hasLivewire())->toBeFalse()
         ->and($detector->hasBoost())->toBeFalse()
         ->and($detector->hasPint())->toBeFalse()
-        ->and($detector->hasMcp())->toBeFalse()
-        ->and($detector->hasSanctum())->toBeFalse()
-        ->and($detector->hasHorizon())->toBeFalse()
-        ->and($detector->hasTelescope())->toBeFalse()
         ->and($detector->hasPrettier())->toBeFalse()
         ->and($detector->hasEslint())->toBeFalse();
 });
 
 it('returns only detected packages from detected()', function (): void {
     writeComposerJson([
-        'require' => ['livewire/livewire' => '^3.0'],
         'require-dev' => ['pestphp/pest' => '^3.0', 'laravel/pint' => '^1.0'],
     ]);
 
@@ -169,39 +105,33 @@ it('returns only detected packages from detected()', function (): void {
     $detected = $detector->detected();
 
     expect($detected->keys()->toArray())
-        ->toContain('pest', 'livewire', 'pint')
-        ->not->toContain('filament', 'inertia', 'boost');
+        ->toContain('pest', 'pint')
+        ->not->toContain('boost', 'node', 'prettier', 'eslint');
 });
 
-it('returns all detection keys from detect()', function (): void {
+it('returns all detection keys from all()', function (): void {
     writeComposerJson([]);
 
     $detector = new StackDetector;
     $all = $detector->all();
 
-    expect($all)->toHaveCount(13)
+    expect($all)->toHaveCount(6)
         ->and($all->keys()->toArray())->toBe([
-            'pest', 'filament', 'inertia', 'livewire', 'boost',
-            'pint', 'mcp', 'sanctum', 'horizon', 'telescope',
-            'node', 'prettier', 'eslint',
+            'pest', 'boost', 'pint', 'node', 'prettier', 'eslint',
         ]);
 });
 
 it('does not confuse require with require-dev', function (): void {
     writeComposerJson([
         'require' => ['pestphp/pest' => '^3.0'],
-        'require-dev' => ['laravel/sanctum' => '^4.0'],
     ]);
 
     $detector = new StackDetector;
 
-    // pest is require-dev only, sanctum is require only
-    expect($detector->hasPest())->toBeFalse()
-        ->and($detector->hasSanctum())->toBeFalse();
+    expect($detector->hasPest())->toBeFalse();
 });
 
 it('handles missing composer.json gracefully', function (): void {
-    // No composer.json or package.json written
     $detector = new StackDetector;
 
     expect($detector->detected()->isEmpty())->toBeTrue();

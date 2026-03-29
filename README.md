@@ -40,9 +40,8 @@ Fails early with an error if `claude` is not installed.
 
 Reads `composer.json` and `package.json` to detect:
 
-- Pest, Pint, Filament, Inertia, Livewire
-- Boost, MCP, Sanctum, Horizon, Telescope
-- Node, Prettier, ESLint
+- Pest, Pint, Boost (from `require-dev`)
+- Node, Prettier, ESLint (from `package.json`)
 
 **3. Offers to install Laravel Boost**
 
