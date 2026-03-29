@@ -28,7 +28,6 @@ That's it. Claudify reads your `composer.json` and `package.json`, detects what'
 
 | Flag | Description |
 |---|---|
-| `--refresh` | Re-detect stack and update configuration without confirmation prompts |
 | `--dry-run` | Preview what would be configured without writing any files |
 
 ### What it does
@@ -119,13 +118,7 @@ Already installed plugins (at any scope) are skipped.
 
 ## Re-running
 
-Claudify is safe to re-run. It merges settings, updates skills, and skips already-installed plugins. Use `--refresh` to skip confirmation prompts:
-
-```bash
-php artisan claudify:install --refresh
-```
-
-This is useful after adding new packages (e.g., installing Pest or Prettier) to pick up new permissions and hooks.
+Claudify is safe to re-run. It merges settings without overwriting, updates skills, and skips already-installed plugins. Run it again after adding new packages (e.g., installing Pest or Prettier) to pick up new permissions and hooks.
 
 ## Testing
 

@@ -21,7 +21,6 @@ use function Laravel\Prompts\note;
 class InstallCommand extends Command
 {
     protected $signature = 'claudify:install
-        {--refresh : Re-detect stack and update configuration}
         {--dry-run : Show what would be configured without writing files}';
 
     protected $description = 'Configure Claude Code for this Laravel project';
@@ -119,10 +118,6 @@ class InstallCommand extends Command
     private function installSettings(): void
     {
         $writer = new JsonWriter(base_path('.claude/settings.json'));
-
-        if ($writer->exists() && ! $this->option('refresh') && ! confirm('.claude/settings.json already exists. Merge new settings?', true)) {
-            return;
-        }
 
         $writer->write($this->buildSettings());
         $this->components->twoColumnDetail('.claude/settings.json', '<fg=green>written</>');

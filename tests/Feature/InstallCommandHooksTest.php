@@ -28,7 +28,7 @@ it('does not include hooks when no formatters detected', function (): void {
         'require-dev' => ['laravel/boost' => '^2.0'],
     ]));
 
-    $this->artisan('claudify:install', ['--refresh' => true])
+    $this->artisan('claudify:install', [])
         ->assertSuccessful();
 
     $settings = json_decode(File::get(base_path('.claude/settings.json')), true);
@@ -39,7 +39,7 @@ it('does not include hooks when no formatters detected', function (): void {
 it('includes deny permissions for .env files', function (): void {
     file_put_contents(base_path('composer.json'), json_encode(['require-dev' => ['laravel/boost' => '^2.0']]));
 
-    $this->artisan('claudify:install', ['--refresh' => true])
+    $this->artisan('claudify:install', [])
         ->assertSuccessful();
 
     $settings = json_decode(File::get(base_path('.claude/settings.json')), true);
@@ -54,7 +54,7 @@ it('copies pint hook script when pint is detected', function (): void {
         'require-dev' => ['laravel/pint' => '^1.0', 'laravel/boost' => '^2.0'],
     ]));
 
-    $this->artisan('claudify:install', ['--refresh' => true])
+    $this->artisan('claudify:install', [])
         ->assertSuccessful();
 
     $hookPath = base_path('.claude/hooks/pint-format.sh');
@@ -68,7 +68,7 @@ it('includes PostToolUse hook for pint when detected', function (): void {
         'require-dev' => ['laravel/pint' => '^1.0', 'laravel/boost' => '^2.0'],
     ]));
 
-    $this->artisan('claudify:install', ['--refresh' => true])
+    $this->artisan('claudify:install', [])
         ->assertSuccessful();
 
     $settings = json_decode(File::get(base_path('.claude/settings.json')), true);

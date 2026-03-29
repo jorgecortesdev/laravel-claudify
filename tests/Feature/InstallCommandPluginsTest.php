@@ -28,7 +28,7 @@ it('installs laravel-simplifier and php-lsp when not already installed', functio
         'claude plugin install *' => Process::result(),
     ]);
 
-    $this->artisan('claudify:install', ['--refresh' => true])
+    $this->artisan('claudify:install', [])
         ->assertSuccessful();
 
     Process::assertRan('claude plugin install laravel-simplifier@laravel --scope project');
@@ -49,7 +49,7 @@ it('skips already installed plugins', function (): void {
         'claude plugin install *' => Process::result(),
     ]);
 
-    $this->artisan('claudify:install', ['--refresh' => true])
+    $this->artisan('claudify:install', [])
         ->assertSuccessful()
         ->expectsOutputToContain('already installed');
 
@@ -67,7 +67,7 @@ it('installs typescript-lsp when node dependencies detected', function (): void 
         'claude plugin install *' => Process::result(),
     ]);
 
-    $this->artisan('claudify:install', ['--refresh' => true])
+    $this->artisan('claudify:install', [])
         ->assertSuccessful();
 
     Process::assertRan('claude plugin install typescript-lsp@claude-plugins-official --scope project');
@@ -82,7 +82,7 @@ it('does not install typescript-lsp when no node dependencies', function (): voi
         'claude plugin install *' => Process::result(),
     ]);
 
-    $this->artisan('claudify:install', ['--refresh' => true])
+    $this->artisan('claudify:install', [])
         ->assertSuccessful();
 
     Process::assertNotRan('claude plugin install typescript-lsp*');
@@ -95,7 +95,7 @@ it('fails when claude cli is not available', function (): void {
         'which claude' => Process::result(exitCode: 1),
     ]);
 
-    $this->artisan('claudify:install', ['--refresh' => true])
+    $this->artisan('claudify:install', [])
         ->assertFailed()
         ->expectsOutputToContain('Claude Code CLI not found');
 });

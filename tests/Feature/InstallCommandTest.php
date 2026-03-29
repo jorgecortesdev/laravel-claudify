@@ -29,14 +29,14 @@ afterEach(function (): void {
 it('runs successfully', function (): void {
     file_put_contents(base_path('composer.json'), json_encode(['require-dev' => ['laravel/boost' => '^2.0']]));
 
-    $this->artisan('claudify:install', ['--refresh' => true])
+    $this->artisan('claudify:install', [])
         ->assertSuccessful();
 });
 
 it('creates settings file', function (): void {
     file_put_contents(base_path('composer.json'), json_encode(['require-dev' => ['laravel/boost' => '^2.0']]));
 
-    $this->artisan('claudify:install', ['--refresh' => true])
+    $this->artisan('claudify:install', [])
         ->assertSuccessful();
 
     expect(base_path('.claude/settings.json'))->toBeFile();
@@ -45,7 +45,7 @@ it('creates settings file', function (): void {
 it('includes base permissions', function (): void {
     file_put_contents(base_path('composer.json'), json_encode(['require-dev' => ['laravel/boost' => '^2.0']]));
 
-    $this->artisan('claudify:install', ['--refresh' => true])
+    $this->artisan('claudify:install', [])
         ->assertSuccessful();
 
     $settings = json_decode(File::get(base_path('.claude/settings.json')), true);
@@ -61,7 +61,7 @@ it('includes pest permission when pest is detected', function (): void {
         'require-dev' => ['pestphp/pest' => '^3.0', 'laravel/boost' => '^2.0'],
     ]));
 
-    $this->artisan('claudify:install', ['--refresh' => true])
+    $this->artisan('claudify:install', [])
         ->assertSuccessful();
 
     $settings = json_decode(File::get(base_path('.claude/settings.json')), true);
@@ -74,7 +74,7 @@ it('includes node permissions when package.json exists', function (): void {
     file_put_contents(base_path('composer.json'), json_encode(['require-dev' => ['laravel/boost' => '^2.0']]));
     file_put_contents(base_path('package.json'), json_encode(['devDependencies' => []]));
 
-    $this->artisan('claudify:install', ['--refresh' => true])
+    $this->artisan('claudify:install', [])
         ->assertSuccessful();
 
     $settings = json_decode(File::get(base_path('.claude/settings.json')), true);
@@ -90,7 +90,7 @@ it('does not include node permissions when package.json is missing', function ()
         'require-dev' => ['laravel/boost' => '^2.0'],
     ]));
 
-    $this->artisan('claudify:install', ['--refresh' => true])
+    $this->artisan('claudify:install', [])
         ->assertSuccessful();
 
     $settings = json_decode(File::get(base_path('.claude/settings.json')), true);
@@ -103,7 +103,7 @@ it('does not include node permissions when package.json is missing', function ()
 it('installs skills', function (): void {
     file_put_contents(base_path('composer.json'), json_encode(['require-dev' => ['laravel/boost' => '^2.0']]));
 
-    $this->artisan('claudify:install', ['--refresh' => true])
+    $this->artisan('claudify:install', [])
         ->assertSuccessful();
 
     expect(base_path('.claude/skills/tdd-pest/SKILL.md'))->toBeFile()
@@ -119,7 +119,7 @@ it('merges settings on repeated install', function (): void {
         'permissions' => ['allow' => ['Bash(custom:*)']],
     ]));
 
-    $this->artisan('claudify:install', ['--refresh' => true])
+    $this->artisan('claudify:install', [])
         ->assertSuccessful();
 
     $settings = json_decode(File::get(base_path('.claude/settings.json')), true);
