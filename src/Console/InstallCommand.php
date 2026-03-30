@@ -172,6 +172,8 @@ class InstallCommand extends Command
             $settings['hooks'] = $hooks;
         }
 
+        $settings['enabledPlugins'] = $this->buildEnabledPlugins();
+
         return $settings;
     }
 
@@ -396,6 +398,20 @@ class InstallCommand extends Command
 
         if ($this->detector->hasNodeDependencies()) {
             $plugins[] = 'typescript-lsp@claude-plugins-official';
+        }
+
+        return $plugins;
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    private function buildEnabledPlugins(): array
+    {
+        $plugins = [];
+
+        foreach ($this->desiredPlugins() as $pluginId) {
+            $plugins[$pluginId] = true;
         }
 
         return $plugins;
