@@ -85,6 +85,7 @@ Copies Laravel-specific skills to `.claude/skills/`:
 | `laravel-conventions` | Coding standards: strict types, type hints, readonly DTOs, enums, naming conventions, file organization |
 | `laravel-security` | Security patterns: input validation, Sanctum auth, policies, SQL injection, XSS, CSRF, rate limiting, file uploads |
 | `laravel-architecture` | Application structure: services vs actions, when to extract, repositories (usually not), events vs observers, jobs, scaling patterns |
+| `laravel-testing-browser` | Browser testing with Pest 4: visit(), interactions, assertions, smoke tests, mobile/device testing, dark mode, accessibility, visual regression, debugging |
 
 Skills are tracked via a `.claudify-manifest.json` file so user-created skills in `.claude/skills/` are never touched.
 
