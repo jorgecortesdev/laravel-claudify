@@ -106,8 +106,8 @@ it('installs skills', function (): void {
     $this->artisan('claudify:install', [])
         ->assertSuccessful();
 
-    expect(base_path('.claude/skills/tdd-pest/SKILL.md'))->toBeFile()
-        ->and(base_path('.claude/skills/debugging-laravel/SKILL.md'))->toBeFile();
+    expect(base_path('.claude/skills/laravel-tdd-pest/SKILL.md'))->toBeFile()
+        ->and(base_path('.claude/skills/laravel-debugging/SKILL.md'))->toBeFile();
 });
 
 it('merges settings on repeated install', function (): void {
@@ -153,5 +153,5 @@ it('dry run shows skills preview', function (): void {
     $this->artisan('claudify:install', ['--dry-run' => true])
         ->assertSuccessful()
         ->expectsOutputToContain('.claude/skills/')
-        ->expectsOutputToContain('tdd-pest');
+        ->expectsOutputToContain('laravel-tdd-pest');
 });
