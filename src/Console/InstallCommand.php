@@ -135,12 +135,70 @@ class InstallCommand extends Command
     private function installGuidelines(): void
     {
         $content = file_get_contents($this->resourcePath('guidelines.md'));
+        $content .= "\n".$this->buildSkillsSection();
+
         $writer = new GuidelineWriter(base_path('CLAUDE.md'));
 
         $existed = $writer->write($content);
 
         $status = $existed ? '<fg=yellow>updated</>' : '<fg=green>written</>';
         $this->components->twoColumnDetail('CLAUDE.md', $status);
+    }
+
+    private function buildSkillsSection(): string
+    {
+        $skillWriter = $this->makeSkillWriter();
+        $skills = $skillWriter->available();
+
+        if ($skills === []) {
+            return '';
+        }
+
+        $lines = [
+            '## Skills',
+            '',
+            'These skills are installed in `.claude/skills/` for this project. Check if one applies before starting work — do not skip them.',
+            '',
+        ];
+
+        $sourcePath = $this->resourcePath('skills');
+
+        foreach ($skills as $name) {
+            $skillFile = $sourcePath.'/'.$name.'/SKILL.md';
+
+            if (! file_exists($skillFile)) {
+                continue;
+            }
+
+            $description = $this->parseSkillDescription($skillFile);
+            $lines[] = "- `{$name}` — {$description}";
+        }
+
+        return implode("\n", $lines)."\n";
+    }
+
+    private function parseSkillDescription(string $path): string
+    {
+        $content = file_get_contents($path);
+
+        if (preg_match('/^---\s*\n.*?description:\s*>-\s*\n(.*?)\n---/s', $content, $matches)) {
+            $full = trim(preg_replace('/\s+/', ' ', $matches[1]));
+
+            return $this->truncateToFirstSentence($full);
+        }
+
+        if (preg_match('/description:\s*["\']?(.+?)["\']?\s*$/m', $content, $matches)) {
+            return $this->truncateToFirstSentence(trim($matches[1]));
+        }
+
+        return basename(dirname($path));
+    }
+
+    private function truncateToFirstSentence(string $text): string
+    {
+        $pos = strpos($text, '. ');
+
+        return $pos !== false ? substr($text, 0, $pos + 1) : $text;
     }
 
     private function installSettings(): void
