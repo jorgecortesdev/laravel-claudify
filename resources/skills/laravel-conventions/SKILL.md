@@ -109,6 +109,12 @@ final class OrderService
 
 ## Laravel Patterns
 
+### Methods: return data OR mutate state, not both
+
+A method should either compute and return a value, or perform a side effect and return void. Mixing both makes code harder to test and reason about.
+
+Eloquent persistence methods are exempt — `create()`, `save()`, `update()`, `delete()` all return data AND mutate. That's the Active Record pattern. Fluent/builder APIs returning `$this` are also exempt. Custom methods are not.
+
 ### Controllers: thin, single-purpose
 
 Controllers receive a request and return a response. Business logic belongs in services or actions — not in the controller.
@@ -126,6 +132,8 @@ final class StoreProjectController extends Controller
 ```
 
 Single-action controllers with `__invoke` are preferred when a controller handles one endpoint.
+
+Controller actions with route-model-bound parameters are exempt from argument count limits — Laravel injects these, you don't control the signature.
 
 ### Form Requests for validation
 

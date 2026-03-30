@@ -41,6 +41,10 @@ Then start the cycle again with the next behavior.
 
 Default to Feature tests. Only use Unit for genuinely isolated logic.
 
+### Pest vs PHPUnit
+
+Use Pest for new test files. When adding tests to an existing PHPUnit file, use PHPUnit syntax in that file. Don't convert existing PHPUnit files to Pest unless explicitly asked.
+
 ## Database Strategy
 
 - **`RefreshDatabase`** — the default. Runs migrations once per test run, wraps each test in a transaction. Use this unless you have a reason not to.
