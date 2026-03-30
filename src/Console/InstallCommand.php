@@ -166,11 +166,24 @@ class InstallCommand extends Command
 
         if ($this->detector->hasPint()) {
             $permissions[] = 'Bash(vendor/bin/pint:*)';
+            $permissions[] = 'Bash(vendor/bin/pint --dirty:*)';
         }
 
         if ($this->detector->hasNodeDependencies()) {
             $permissions[] = 'Bash(npm:*)';
             $permissions[] = 'Bash(npx:*)';
+        }
+
+        if ($this->detector->hasBoost()) {
+            $permissions[] = 'mcp__laravel-boost__search-docs';
+            $permissions[] = 'mcp__laravel-boost__application-info';
+            $permissions[] = 'mcp__laravel-boost__database-query';
+            $permissions[] = 'mcp__laravel-boost__database-schema';
+            $permissions[] = 'mcp__laravel-boost__database-connections';
+            $permissions[] = 'mcp__laravel-boost__read-log-entries';
+            $permissions[] = 'mcp__laravel-boost__browser-logs';
+            $permissions[] = 'mcp__laravel-boost__get-absolute-url';
+            $permissions[] = 'mcp__laravel-boost__last-error';
         }
 
         return $permissions;

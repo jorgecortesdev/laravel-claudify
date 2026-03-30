@@ -54,35 +54,25 @@ Copies auto-format scripts to `.claude/hooks/` based on detected formatters:
 
 Generates permissions and deny rules based on your stack:
 
-```json
-{
-    "permissions": {
-        "allow": [
-            "Bash(php:*)",
-            "Bash(php artisan:*)",
-            "Bash(composer:*)",
-            "Bash(vendor/bin/pest:*)",
-            "Bash(vendor/bin/pint:*)"
-        ],
-        "deny": [
-            "Edit(.env*)",
-            "Write(.env*)"
-        ]
-    },
-    "hooks": {
-        "PostToolUse": [
-            {
-                "matcher": "Edit|Write",
-                "hooks": [
-                    {"type": "command", "command": ".claude/hooks/pint-format.sh"}
-                ]
-            }
-        ]
-    }
-}
-```
+**Base permissions** (always included):
+- `Bash(php:*)`, `Bash(php artisan:*)`, `Bash(composer:*)`
 
-Pest, Pint, npm, and npx permissions only appear when those tools are detected. The `.env` deny rules are always included. If `.claude/settings.json` already exists, new settings are merged without overwriting your existing configuration.
+**Conditional permissions** (when detected):
+
+| Condition | Permissions added |
+|---|---|
+| Pest | `Bash(vendor/bin/pest:*)` |
+| Pint | `Bash(vendor/bin/pint:*)`, `Bash(vendor/bin/pint --dirty:*)` |
+| Node | `Bash(npm:*)`, `Bash(npx:*)` |
+| Boost | All 9 Boost MCP tools: `search-docs`, `application-info`, `database-query`, `database-schema`, `database-connections`, `read-log-entries`, `browser-logs`, `get-absolute-url`, `last-error` |
+
+**Deny rules** (always included):
+- `Edit(.env*)`, `Write(.env*)`
+
+**Hooks** (when formatters detected):
+- PostToolUse on Edit/Write: runs Pint on `.php` files, Prettier on non-PHP files
+
+If `.claude/settings.json` already exists, new settings are merged without overwriting your existing configuration. Duplicate permissions are deduplicated automatically.
 
 ### 6. Installs skills
 
