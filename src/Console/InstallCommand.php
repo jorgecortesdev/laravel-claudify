@@ -13,6 +13,7 @@ use JorgeCortesDev\Claudify\Concerns\DisplayHelper;
 use JorgeCortesDev\Claudify\Detection\StackDetector;
 use JorgeCortesDev\Claudify\Enums\WriteResult;
 use JorgeCortesDev\Claudify\Writers\DirectoryWriter;
+use JorgeCortesDev\Claudify\Writers\GuidelineWriter;
 use JorgeCortesDev\Claudify\Writers\JsonWriter;
 
 use function Laravel\Prompts\confirm;
@@ -23,7 +24,8 @@ class InstallCommand extends Command
     use DisplayHelper;
 
     protected $signature = 'claudify:install
-        {--dry-run : Show what would be configured without writing files}';
+        {--dry-run : Show what would be configured without writing files}
+        {--update : Run in update mode (non-interactive, skips boost and plugins)}';
 
     protected $description = 'Configure Claude Code for this Laravel project';
 
@@ -31,7 +33,9 @@ class InstallCommand extends Command
 
     public function handle(): int
     {
-        if (! $this->claudeCliExists()) {
+        $isUpdate = $this->option('update');
+
+        if (! $isUpdate && ! $this->claudeCliExists()) {
             $this->components->error('Claude Code CLI not found. Install it from https://claude.ai/download');
 
             return self::FAILURE;
@@ -39,8 +43,10 @@ class InstallCommand extends Command
 
         $this->detector = new StackDetector;
 
-        $this->displayHeader('Install', config('app.name', 'Laravel'));
-        $this->displayDetectedStack();
+        if (! $isUpdate) {
+            $this->displayHeader('Install', config('app.name', 'Laravel'));
+            $this->displayDetectedStack();
+        }
 
         if ($this->option('dry-run')) {
             $this->displayDryRun();
@@ -48,14 +54,20 @@ class InstallCommand extends Command
             return self::SUCCESS;
         }
 
-        $this->installBoost();
+        if (! $isUpdate) {
+            $this->installBoost();
+        }
+
+        $this->installGuidelines();
         $this->installHooks();
         $this->installSettings();
         $this->installSkills();
         $this->installAgents();
-        $this->installPlugins();
 
-        $this->displayOutro(' Claude Code is now configured for this project. ');
+        if (! $isUpdate) {
+            $this->installPlugins();
+            $this->displayOutro(' Claude Code is now configured for this project. ');
+        }
 
         return self::SUCCESS;
     }
@@ -78,6 +90,9 @@ class InstallCommand extends Command
     private function displayDryRun(): void
     {
         note('Dry run — these files would be written:');
+
+        $this->line('');
+        $this->line('  CLAUDE.md (workflow rules inside <laravel-claudify> tags)');
 
         $this->line('');
         $this->line('  .claude/settings.json');
@@ -115,6 +130,17 @@ class InstallCommand extends Command
         foreach (explode("\n", $json) as $line) {
             $this->line("    {$line}");
         }
+    }
+
+    private function installGuidelines(): void
+    {
+        $content = file_get_contents($this->resourcePath('guidelines.md'));
+        $writer = new GuidelineWriter(base_path('CLAUDE.md'));
+
+        $existed = $writer->write($content);
+
+        $status = $existed ? '<fg=yellow>updated</>' : '<fg=green>written</>';
+        $this->components->twoColumnDetail('CLAUDE.md', $status);
     }
 
     private function installSettings(): void

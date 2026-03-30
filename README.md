@@ -111,9 +111,25 @@ php artisan claudify:install --dry-run
 
 This shows the settings JSON, hook scripts, and skills that would be installed. It does not preview Boost installation or plugin installation since those require network access.
 
+## Auto-update on composer update
+
+Add the update command to your `composer.json` so Claudify refreshes automatically when the package is updated:
+
+```json
+{
+    "scripts": {
+        "post-update-cmd": [
+            "@php artisan claudify:update --ansi"
+        ]
+    }
+}
+```
+
+The update command re-runs guidelines, hooks, settings, and skills non-interactively. It skips Boost installation and plugin installation — those are first-install concerns handled by `claudify:install`.
+
 ## Re-running
 
-Safe to re-run at any time. Settings are merged (not overwritten), skills are updated, and plugins already installed are skipped. Run it again after adding packages like Pest or Prettier to pick up new permissions and hooks.
+Safe to re-run `claudify:install` at any time. Settings are merged (not overwritten), skills are updated, and plugins already installed are skipped. Run it again after adding packages like Pest or Prettier to pick up new permissions and hooks.
 
 ## Testing
 

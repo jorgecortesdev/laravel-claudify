@@ -6,6 +6,7 @@ namespace JorgeCortesDev\Claudify;
 
 use Illuminate\Support\ServiceProvider;
 use JorgeCortesDev\Claudify\Console\InstallCommand;
+use JorgeCortesDev\Claudify\Console\UpdateCommand;
 
 class ClaudifyServiceProvider extends ServiceProvider
 {
@@ -14,6 +15,7 @@ class ClaudifyServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 InstallCommand::class,
+                UpdateCommand::class,
             ]);
         }
     }
