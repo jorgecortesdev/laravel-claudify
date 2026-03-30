@@ -11,24 +11,38 @@ description: >-
 
 # Laravel Architecture
 
-How to structure Laravel applications so they stay maintainable as they grow. Start simple, add structure only when complexity demands it.
+## When this skill triggers, follow this process
 
-## The Default: Start with Laravel's Structure
+### Building a new feature
 
-For most applications, Laravel's default directory structure is enough. Don't add services, repositories, or actions until you have a reason.
+1. **Size the app** — count the models to determine small (10-20), medium (20-50), or large (50+). This determines how much structure is appropriate.
+2. **Check the decision framework** — does this feature need a service/action, or does it fit in the controller? Apply the extraction criteria below.
+3. **Pick one pattern** — services OR actions, not both. Check what the project already uses.
+4. **Show the code** — use the patterns in the reference section below.
 
-```
-app/
-├── Http/Controllers/     # Receives requests, returns responses
-├── Http/Requests/        # Validation rules
-├── Models/               # Eloquent models, relationships, scopes
-├── Policies/             # Authorization logic
-└── Enums/                # Status types, fixed value sets
-```
+### Reviewing existing structure
 
-This handles a surprising amount of complexity. A controller that calls a model directly is not "bad architecture" — it's appropriate architecture for simple operations.
+1. **Size the app** — count models.
+2. **List extracted layers** — services, actions, repositories, events, observers, jobs. For each, state which model/feature it serves.
+3. **Evaluate each layer against the decision framework** — is it justified by the criteria below? Flag layers that exist without justification (over-engineering) and missing layers where criteria are met (under-engineering).
+4. **Check for pattern mixing** — are both services AND actions used? Flag the inconsistency.
+5. **Output a table**:
 
-## When to Extract: The Decision Framework
+| Layer | Exists? | Justified? | Recommendation |
+|---|---|---|---|
+| ProjectService | Yes | Yes — coordinates 3 models + notifications | Keep |
+| UserRepository | Yes | No — wraps Eloquent with no added value | Remove, use model directly |
+| Events for audit logging | No | Yes — 3 independent listeners needed | Add |
+
+### Answering "where should I put this?"
+
+1. Apply the decision framework below.
+2. Give a direct answer with the file path.
+3. Show a code example using the project's existing pattern (services or actions).
+
+---
+
+## Decision Framework
 
 ### Keep it in the controller when:
 - The operation is a simple CRUD action
@@ -47,7 +61,51 @@ This handles a surprising amount of complexity. A controller that calls a model 
 
 Actions and services solve the same problem differently. Actions are single-purpose (one public method). Services group related operations. Pick one pattern per project — mixing both creates confusion.
 
-## Services
+## Scaling Patterns
+
+Size determines structure:
+
+**Small app** (10-20 models): Controllers + Models + Form Requests. No services needed.
+
+**Medium app** (20-50 models): Extract services or actions for complex operations. Add DTOs for data passing between layers. Events for cross-cutting concerns.
+
+**Large app** (50+ models): Consider domain-based organization:
+```
+app/
+├── Domain/
+│   ├── Projects/
+│   │   ├── Models/
+│   │   ├── Services/
+│   │   ├── Events/
+│   │   └── Data/
+│   └── Billing/
+│       ├── Models/
+│       ├── Services/
+│       └── Jobs/
+├── Http/Controllers/
+└── Http/Requests/
+```
+
+Don't reorganize preemptively. Reorganize when navigation becomes painful — that's the signal, not a model count.
+
+**Migration cost warning:** Restructuring into domain folders means updating namespaces in every model, relation closure, factory, policy binding, and morph map. For 50+ models, that's a real migration with real risk of breakage. Only do it when the pain of the current structure exceeds the cost of the migration.
+
+## Reference: Patterns
+
+### The default structure
+
+```
+app/
+├── Http/Controllers/     # Receives requests, returns responses
+├── Http/Requests/        # Validation rules
+├── Models/               # Eloquent models, relationships, scopes
+├── Policies/             # Authorization logic
+└── Enums/                # Status types, fixed value sets
+```
+
+A controller that calls a model directly is not "bad architecture" — it's appropriate architecture for simple operations.
+
+### Services
 
 A service encapsulates business logic that doesn't belong in a controller or model. It coordinates between models, sends notifications, dispatches jobs.
 
@@ -79,13 +137,13 @@ final class ProjectService
 }
 ```
 
-### Guidelines for services:
+Guidelines:
 - Inject dependencies through the constructor
 - Each method does one thing and returns data or void — not both
 - Services call models, not other services (avoid service chains)
 - Name methods after what they do, not how they're called
 
-## Actions
+### Actions
 
 An action is a single-purpose class with one public method. The class name IS the documentation.
 
@@ -123,7 +181,7 @@ public function __invoke(StoreProjectRequest $request, CreateProject $action): J
 }
 ```
 
-## Repositories: Usually Not Needed
+### Repositories: Usually Not Needed
 
 Eloquent IS your repository. Wrapping it in an interface adds indirection without value in most Laravel applications.
 
@@ -139,29 +197,22 @@ Eloquent IS your repository. Wrapping it in an interface adds indirection withou
 
 If you need reusable queries, use Eloquent scopes or dedicated query builder classes instead of full repository abstractions.
 
-## Events vs Observers vs Direct Calls
+### Events vs Observers vs Direct Calls
 
-### Direct calls (default)
-When A causes B and that relationship is obvious, just call B directly. A service method that creates a project and sends a notification is clear and debuggable.
+**Direct calls (default):** When A causes B and that relationship is obvious, just call B directly. A service method that creates a project and sends a notification is clear and debuggable.
 
-### Events
-When A happens and multiple independent things should react, use events. The key word is "independent" — if the listeners have ordering dependencies, events are the wrong tool.
+**Events:** When A happens and multiple independent things should react. The key word is "independent" — if the listeners have ordering dependencies, events are the wrong tool.
 
 ```php
-// Good use of events — independent reactions
 ProjectCreated::dispatch($project);
-
 // Listener 1: Send welcome email
 // Listener 2: Update analytics
 // Listener 3: Create audit log
 ```
 
-### Observers
-When you need to react to model lifecycle events (creating, updating, deleting) regardless of where in the codebase the model is modified. Observers are implicit — they fire automatically, which makes them harder to trace when debugging.
+**Observers:** When you need to react to model lifecycle events regardless of where the model is modified. Use sparingly — they're implicit and hard to trace when debugging.
 
-Use observers sparingly. If you need to set a UUID on creation, an observer works. If you need to send an email on creation, a direct call in the service is clearer.
-
-## Jobs and Queues
+### Jobs and Queues
 
 Move slow operations out of the request cycle. If it takes more than a second or involves external services, it should probably be a queued job.
 
@@ -183,37 +234,8 @@ final class ProcessProjectImport implements ShouldQueue
 }
 ```
 
-### Queue guidelines:
+Guidelines:
 - Pass IDs, not models — models may change between dispatch and execution
 - Implement `ShouldQueue` for async, omit it for sync
 - Add `tries`, `backoff`, and `failed()` for resilience
 - Don't queue things that the user needs to see immediately
-
-## Scaling Patterns
-
-As the application grows, add structure incrementally:
-
-**Small app** (10-20 models): Controllers + Models + Form Requests. No services needed.
-
-**Medium app** (20-50 models): Extract services or actions for complex operations. Add DTOs for data passing between layers. Events for cross-cutting concerns.
-
-**Large app** (50+ models): Consider domain-based organization:
-```
-app/
-├── Domain/
-│   ├── Projects/
-│   │   ├── Models/
-│   │   ├── Services/
-│   │   ├── Events/
-│   │   └── Data/
-│   └── Billing/
-│       ├── Models/
-│       ├── Services/
-│       └── Jobs/
-├── Http/Controllers/
-└── Http/Requests/
-```
-
-Don't reorganize preemptively. Reorganize when navigation becomes painful — that's the signal, not a model count.
-
-**Migration cost warning:** Restructuring into domain folders means updating namespaces in every model, relation closure, factory, policy binding, and morph map. For 50+ models, that's a real migration with real risk of breakage. Only do it when the pain of the current structure exceeds the cost of the migration.
